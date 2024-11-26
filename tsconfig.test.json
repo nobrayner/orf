@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["test"],
+  "exclude": ["node_modules", "dist"],
+  "lib": ["DOM", "DOM.Iterable", "ES2021"],
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true
+  }
+}

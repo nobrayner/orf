@@ -1,0 +1,41 @@
+{
+  "name": "orf",
+  "version": "0.0.1",
+  "description": "Option. Result. Future",
+  "sideEffect": false,
+  "main": "lib/orf.js",
+  "module": "lib/orf.mjs",
+  "types": "lib/orf.d.ts",
+  "keywords": [],
+  "author": "Braydon Hall <nobrayner>",
+  "license": "MIT",
+  "scripts": {
+    "test": "vitest",
+    "build": "tsup",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "changeset": "changeset",
+    "release": "pnpm build && pnpm changeset publish",
+    "version": "changeset version"
+  },
+  "files": [
+    "LICENSE",
+    "lib",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "module": "./lib/orf.mjs",
+      "default": "./lib/orf.js",
+      "types": "./lib/orf.d.ts"
+    }
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.4.6",
+    "@changesets/cli": "^2.24.4",
+    "@types/node": "^18.7.14",
+    "prettier": "^2.7.1",
+    "tsup": "^6.2.3",
+    "typescript": "^4.8.2",
+    "vitest": "^2.1.5"
+  }
+}

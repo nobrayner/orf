@@ -17,3 +17,4 @@ yarn-debug.log*
 yarn-error.log*
 
 Session.vim
+tsconfig.vitest-temp.json

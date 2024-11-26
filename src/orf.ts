@@ -1,3 +1,1 @@
-export function noop() {
-  console.log("Hi");
-}
+export { Option } from "./option";

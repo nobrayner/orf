@@ -9,16 +9,16 @@ interface IOption<T> {
   isNone(): this is None<T>;
   match<U, V = U>(config: { Some: (t: T) => U; None: () => V }): U | V;
   map<U>(fn: (t: T) => U): Option<U>;
-  mapOr<U, V = U>(or_value: U, fn: (t: T) => V): Option<U | V>;
-  mapOrElse<U, V = U>(or_fn: () => U, map_fn: (t: T) => V): Option<U | V>;
+  mapOr<U, V = U>(or_value: U, fn: (t: T) => V): U | V;
+  mapOrElse<U, V = U>(or_fn: () => U, map_fn: (t: T) => V): U | V;
   and<U>(other: Option<U>): Option<U>;
   andThen<O extends Option<any>>(fn: (t: T) => O): Option<InferInnerType<O>>;
   or(other: Option<T>): Option<T>;
   orElse(fn: () => Option<T>): Option<T>;
   tap(fn: (t: T) => void): Option<T>;
   unwrap(): T;
-  unwrapOr(or_value: T): T;
-  unwrapOrElse(or_fn: () => T): T;
+  unwrapOr<U = T>(or_value: U): T | U;
+  unwrapOrElse<U = T>(or_fn: () => U): T | U;
   // TODO: Implement these methods after Result
   //okOr<E>(error: E): Result<T, E>;
   //orOrElse<E>(fn: () => E): Result<T, E>;
@@ -45,34 +45,27 @@ export namespace Option {
   }
 
   export function isOption(thing: unknown): thing is Option<unknown> {
-    if (thing === null) {
-      return false;
-    }
-    if (typeof thing !== "object") {
-      return false;
-    }
-
-    const is_some = thing instanceof __Some;
-    const is_none = thing instanceof __None;
-
-    return is_some || is_none;
+    return thing instanceof __Some || thing instanceof __None;
   }
 
   export function from<T>(thing: T | null | undefined): Option<NonNullable<T>> {
     return !thing ? None() : Some(thing);
   }
 
-  // FIXME: This should return a Result
   export function fromJSON<T>(json: JsonOption<T>): Option<T> {
-    if (json.__orf_type__ !== "Option") {
+    if (json.__orf_type__ !== "Option" && !("tag" in json)) {
       throw new Error("Invalid Option JSON");
     }
 
-    if (json.tag === "Some") {
+    if (json.tag === "Some" && "value" in json) {
       return Some(json.value);
     }
 
-    return None();
+    if (json.tag === "None") {
+      return None();
+    }
+
+    throw new Error("Invalid Option JSON");
   }
 }
 
@@ -95,12 +88,12 @@ class __Some<T> implements IOption<T> {
     return Option.Some(fn(this.value));
   }
 
-  mapOr<U, V = U>(_or_value: U, fn: (t: T) => V): Option<U | V> {
-    return Option.Some(fn(this.value));
+  mapOr<U, V = U>(_or_value: U, fn: (t: T) => V): U | V {
+    return fn(this.value);
   }
 
-  mapOrElse<U, V = U>(_or_fn: () => U, map_fn: (t: T) => V): Option<U | V> {
-    return Option.Some(map_fn(this.value));
+  mapOrElse<U, V = U>(_or_fn: () => U, map_fn: (t: T) => V): U | V {
+    return map_fn(this.value);
   }
 
   and<U>(other: Option<U>): Option<U> {
@@ -129,11 +122,11 @@ class __Some<T> implements IOption<T> {
     return this.value;
   }
 
-  unwrapOr(_or_value: T): T {
+  unwrapOr<U = T>(_or_value: U): T {
     return this.value;
   }
 
-  unwrapOrElse(_or_fn: () => T): T {
+  unwrapOrElse<U = T>(_or_fn: () => U): T {
     return this.value;
   }
 
@@ -159,12 +152,12 @@ class __None<T> implements IOption<T> {
     return Option.None();
   }
 
-  mapOr<U, V = U>(or_value: U, _fn: (t: T) => V): Option<U | V> {
-    return Option.Some(or_value);
+  mapOr<U, V = U>(or_value: U, _fn: (t: T) => V): U | V {
+    return or_value;
   }
 
-  mapOrElse<U, V = U>(or_fn: () => U, _map_fn: (t: T) => V): Option<U | V> {
-    return Option.Some(or_fn());
+  mapOrElse<U, V = U>(or_fn: () => U, _map_fn: (t: T) => V): U | V {
+    return or_fn();
   }
 
   and<U>(_other: Option<U>): Option<U> {
@@ -193,11 +186,11 @@ class __None<T> implements IOption<T> {
     throw new Error("Cannot unwrap None");
   }
 
-  unwrapOr(or_value: T): T {
+  unwrapOr<U = T>(or_value: U): U {
     return or_value;
   }
 
-  unwrapOrElse(or_fn: () => T): T {
+  unwrapOrElse<U = T>(or_fn: () => U): U {
     return or_fn();
   }
 

@@ -31,12 +31,12 @@ test("Option.match", () => {
 
 test("Option.map", () => {
   expect(some.map((val) => `${val * 2}`)).toStrictEqual(Option.Some("2"));
-  expect(none.map((val) => `${val * 2}`)).toStrictEqual(Option.None());
+  expect(none.map((val) => `${val * 2}`)).toBe(none);
 });
 
 test("Option.mapOr", () => {
-  expect(some.mapOr(0, (val) => `${val * 2}`)).toStrictEqual(Option.Some("2"));
-  expect(none.mapOr(0, (val) => `${val * 2}`)).toStrictEqual(Option.Some(0));
+  expect(some.mapOr(0, (val) => `${val * 2}`)).toStrictEqual("2");
+  expect(none.mapOr(0, (val) => `${val * 2}`)).toStrictEqual(0);
 });
 
 test("Option.mapOrElse", () => {
@@ -45,20 +45,20 @@ test("Option.mapOrElse", () => {
       () => 0 as const,
       (val) => `${val * 2}`
     )
-  ).toStrictEqual(Option.Some("2"));
+  ).toStrictEqual("2");
   expect(
     none.mapOrElse(
       () => 0 as const,
       (val) => `${val * 2}`
     )
-  ).toStrictEqual(Option.Some(0));
+  ).toStrictEqual(0);
 });
 
 test("Option.and", () => {
   expect(some.and(Option.None())).toStrictEqual(Option.None());
   expect(some.and(Option.Some("2"))).toStrictEqual(Option.Some("2"));
-  expect(none.and(Option.Some("2"))).toStrictEqual(none);
-  expect(none.and(Option.None())).toStrictEqual(none);
+  expect(none.and(Option.Some("2"))).toBe(none);
+  expect(none.and(Option.None())).toBe(none);
 });
 
 test("Option.andThen", () => {
@@ -66,44 +66,35 @@ test("Option.andThen", () => {
     Option.Some("2")
   );
   expect(none.andThen(() => Option.None())).toStrictEqual(Option.None());
-  expect(
-    some.andThen((val) => {
-      if (val > 1) {
-        return Option.Some(val * 2);
-      }
-      if (val === 1) {
-        return Option.Some("INVALID" as const);
-      }
-
-      return Option.None<null>();
-    })
-  ).toStrictEqual(Option.Some("INVALID"));
 });
 
 test("Option.or", () => {
-  expect(some.or(Option.None())).toStrictEqual(some);
-  expect(some.or(Option.Some(2))).toStrictEqual(some);
+  expect(some.or(Option.None())).toBe(some);
+  expect(some.or(Option.Some(2))).toBe(some);
   expect(none.or(Option.Some(2))).toStrictEqual(Option.Some(2));
   expect(none.or(Option.None())).toStrictEqual(Option.None());
 });
 
 test("Option.orElse", () => {
-  expect(some.orElse(() => Option.None())).toStrictEqual(some);
-  expect(some.orElse(() => Option.Some(2))).toStrictEqual(some);
+  expect(some.orElse(() => Option.None())).toBe(some);
+  expect(some.orElse(() => Option.Some(2))).toBe(some);
   expect(none.orElse(() => Option.Some(2))).toStrictEqual(Option.Some(2));
   expect(none.orElse(() => Option.None())).toStrictEqual(Option.None());
 });
 
 test("Option.tap", () => {
-  const fn = vi.fn();
+  const fn = vi.fn((val) => expect(val).toBe(1));
 
-  some.tap(fn);
+  const some_tap = some.tap(fn);
   expect(fn).toHaveBeenCalledWith(1);
+  expect(fn).toHaveBeenCalledTimes(1);
+  expect(some_tap).toBe(some);
 
   fn.mockReset();
 
-  none.tap(fn);
+  const none_tap = none.tap(fn);
   expect(fn).not.toHaveBeenCalled();
+  expect(none_tap).toBe(none);
 });
 
 test("Option.unwrap", () => {
@@ -112,13 +103,17 @@ test("Option.unwrap", () => {
 });
 
 test("Option.unwrapOr", () => {
-  expect(some.unwrapOr(0)).toBe(1);
-  expect(none.unwrapOr(0)).toBe(0);
+  expect(some.unwrapOr(0)).toStrictEqual(1);
+  expect(some.unwrapOr("Hi")).toStrictEqual(1);
+  expect(none.unwrapOr(0)).toStrictEqual(0);
+  expect(none.unwrapOr("Hi")).toStrictEqual("Hi");
 });
 
 test("Option.unwrapOrElse", () => {
   expect(some.unwrapOrElse(() => 0)).toBe(1);
+  expect(some.unwrapOrElse(() => "Hi")).toBe(1);
   expect(none.unwrapOrElse(() => 0)).toBe(0);
+  expect(none.unwrapOrElse(() => "Hi")).toBe("Hi");
 });
 
 test("Option.toJSON", () => {

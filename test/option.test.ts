@@ -1,5 +1,6 @@
 import { vi, expect, test } from "vitest";
 import { Option } from "../src/option";
+import { Result } from "../src/result";
 
 const some = Option.from(1);
 const none = Option.from<number>(null);
@@ -32,6 +33,16 @@ test("Option.match", () => {
 test("Option.map", () => {
   expect(some.map((val) => `${val * 2}`)).toStrictEqual(Option.Some("2"));
   expect(none.map((val) => `${val * 2}`)).toBe(none);
+  expect(
+    Option.Some({ test: 0 }).map((val) => {
+      val.test++;
+      return val;
+    })
+  ).toStrictEqual(
+    Option.Some({
+      test: 1,
+    })
+  );
 });
 
 test("Option.mapOr", () => {
@@ -97,6 +108,23 @@ test("Option.tap", () => {
   expect(none_tap).toBe(none);
 });
 
+test("Option.tap doesn't modify the value", () => {
+  const some = Option.from({
+    test: 1,
+  });
+
+  expect(() => {
+    // @ts-expect-error
+    some.tap((val) => val.test++);
+  }).toThrowError();
+
+  expect(some).toStrictEqual(
+    Option.Some({
+      test: 1,
+    })
+  );
+});
+
 test("Option.unwrap", () => {
   expect(some.unwrap()).toBe(1);
   expect(() => none.unwrap()).toThrowError();
@@ -114,6 +142,16 @@ test("Option.unwrapOrElse", () => {
   expect(some.unwrapOrElse(() => "Hi")).toBe(1);
   expect(none.unwrapOrElse(() => 0)).toBe(0);
   expect(none.unwrapOrElse(() => "Hi")).toBe("Hi");
+});
+
+test("Option.okOr", () => {
+  expect(some.okOr("error")).toStrictEqual(Result.Ok(1));
+  expect(none.okOr("error")).toStrictEqual(Result.Error("error"));
+});
+
+test("Option.okOrElse", () => {
+  expect(some.okOrElse(() => "error")).toStrictEqual(Result.Ok(1));
+  expect(none.okOrElse(() => "error")).toStrictEqual(Result.Error("error"));
 });
 
 test("Option.toJSON", () => {

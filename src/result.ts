@@ -2,8 +2,8 @@ import { Option } from "./option";
 
 const JSError = Error;
 
-type InferOkType<T> = T extends Result<infer U, any> ? U : never;
-type InferErrorType<T> = T extends Result<any, infer U> ? U : never;
+export type InferOkType<T> = T extends Result<infer U, any> ? U : never;
+export type InferErrorType<T> = T extends Result<any, infer U> ? U : never;
 
 interface IResult<T, E> {
   /**
@@ -129,7 +129,7 @@ interface IResult<T, E> {
    * // result === Result.Ok(1)
    * ```
    */
-  mapErr<F>(map_fn: (e: E) => F): Result<T, F>;
+  mapError<F>(map_fn: (e: E) => F): Result<T, F>;
 
   /**
    * Returns the existing `Error` if the result is an `Error`, otherwise
@@ -163,7 +163,9 @@ interface IResult<T, E> {
    * // result === Result.Error("error")
    * ```
    */
-  andThen<U, F = E>(and_fn: (t: T) => Result<U, F>): Result<U, E | F>;
+  andThen<R extends Result<any, any>>(
+    and_fn: (t: T) => R
+  ): Result<InferOkType<R>, InferErrorType<R> | E>;
 
   /**
    * Returns `or_value` if the result is an `Error`, otherwise returns
@@ -197,7 +199,9 @@ interface IResult<T, E> {
    * // result === Result.Ok("Not okay: error")
    * ```
    */
-  orElse<F, U = T>(or_fn: (e: E) => Result<U, F>): Result<T | U, F>;
+  orElse<R extends Result<unknown, unknown>>(
+    or_fn: (e: E) => R
+  ): Result<InferOkType<R> | T, InferErrorType<R>>;
 
   /**
    * Runs `fn` with `Readonly<T>` if the result is `Ok`, and then returns
@@ -271,7 +275,7 @@ interface IResult<T, E> {
    * // Throws an exception
    * ```
    */
-  unwrapErr(): E;
+  unwrapError(): E;
 
   /**
    * Returns the `T` of an `Ok<T, E>`, or the `or_value` if the result is
@@ -355,28 +359,16 @@ export type JsonResult<T, E> =
 export namespace Result {
   /**
    * Creates an `Ok<T, never>` with the provided value
-   *
-   * ## Example
-   * ```ts
-   * const result = Result.Ok(1);
-   * // result === Result.Ok(1)
-   * ```
    */
-  export function Ok<T>(value: T): Ok<T, never> {
-    return new __Ok(value);
+  export function Ok<T, E = never>(value: T): Result<T, E> {
+    return Object.freeze(new __Ok<T, E>(value));
   }
 
   /**
    * Creates an `Error<never, E>` with the provided error
-   *
-   * ## Example
-   * ```ts
-   * const result = Result.Error("error");
-   * // result === Result.Error("error")
-   * ```
    */
-  export function Error<E>(value: E): Error<never, E> {
-    return new __Error(value);
+  export function Error<T = never, E = never>(value: E): Result<T, E> {
+    return Object.freeze(new __Error<T, E>(value));
   }
 
   /**
@@ -583,24 +575,28 @@ class __Ok<T, E> implements IResult<T, E> {
     return map_fn(this.value);
   }
 
-  mapErr<F>(_map_fn: (e: E) => F): Result<T, F> {
+  mapError<F>(_map_fn: (e: E) => F): Result<T, F> {
     return this as unknown as Result<T, F>;
   }
 
   and<U, F = E>(and_value: Result<U, F>): Result<U, E | F> {
-    return and_value;
+    return and_value as Result<U, E | F>;
   }
 
-  andThen<U, F = E>(and_fn: (t: T) => Result<U, F>): Result<U, E | F> {
-    return and_fn(this.value);
+  andThen<R extends Result<any, any>>(
+    and_fn: (t: T) => R
+  ): Result<InferOkType<R>, InferErrorType<R> | E> {
+    return and_fn(this.value) as Result<InferOkType<R>, InferErrorType<R> | E>;
   }
 
   or<F, U = T>(_or_value: Result<U, F>): Result<T | U, F> {
     return this as unknown as Result<T | U, F>;
   }
 
-  orElse<F, U = T>(_or_fn: (e: E) => Result<U, F>): Result<T | U, F> {
-    return this as unknown as Result<T | U, F>;
+  orElse<R extends Result<any, any>>(
+    _or_fn: (e: E) => R
+  ): Result<InferOkType<R> | T, InferErrorType<R>> {
+    return this as Result<T, InferErrorType<R>>;
   }
 
   tap(fn: (t: Readonly<T>) => void): Result<T, E> {
@@ -622,8 +618,8 @@ class __Ok<T, E> implements IResult<T, E> {
     return this.value;
   }
 
-  unwrapErr(): E {
-    throw new JSError("Cannot unwrapErr an Ok");
+  unwrapError(): E {
+    throw new JSError("Cannot unwrapError an Ok");
   }
 
   unwrapOr<U = T>(_or_value: U): T {
@@ -666,7 +662,7 @@ class __Error<T, E> implements IResult<T, E> {
     return or_fn();
   }
 
-  mapErr<F>(map_fn: (e: E) => F): Result<T, F> {
+  mapError<F>(map_fn: (e: E) => F): Result<T, F> {
     return Result.Error(map_fn(this.error));
   }
 
@@ -674,15 +670,19 @@ class __Error<T, E> implements IResult<T, E> {
     return this as unknown as Result<U, E | F>;
   }
 
-  andThen<U, F = E>(_and_fn: (t: T) => Result<U, F>): Result<U, E | F> {
-    return this as unknown as Result<U, E | F>;
+  andThen<R extends Result<any, any>>(
+    _and_fn: (t: T) => R
+  ): Result<InferOkType<R>, InferErrorType<R> | E> {
+    return this as Result<InferOkType<R>, E>;
   }
 
   or<F, U = T>(or_value: Result<U, F>): Result<T | U, F> {
-    return or_value;
+    return or_value as Result<T | U, F>;
   }
 
-  orElse<F, U = T>(or_fn: (e: E) => Result<U, F>): Result<T | U, F> {
+  orElse<R extends Result<any, any>>(
+    or_fn: (e: E) => R
+  ): Result<InferOkType<R> | T, InferErrorType<R>> {
     return or_fn(this.error);
   }
 
@@ -702,10 +702,10 @@ class __Error<T, E> implements IResult<T, E> {
   }
 
   unwrap(): T {
-    throw new JSError("Cannot unwrap an Error");
+    throw this.error;
   }
 
-  unwrapErr(): E {
+  unwrapError(): E {
     return this.error;
   }
 

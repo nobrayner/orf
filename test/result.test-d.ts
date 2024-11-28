@@ -1,5 +1,38 @@
 import { test, expectTypeOf } from "vitest";
-import { Result } from "../src/result";
+import { Result, InferOkType, InferErrorType, Ok, Error } from "../src/result";
+
+test("InferOkType", () => {
+  type Expectation = InferOkType<
+    | Result<0, string>
+    | Result<1, string>
+    | Ok<"Hi", number>
+    | Error<false, boolean>
+    | Ok<{ a: 1; b: 2 }, string>
+    | Ok<{ a: 3; b: 4 }, string>
+  >;
+
+  const x: Expectation = null as unknown as Expectation;
+
+  expectTypeOf(x).toMatchTypeOf<
+    0 | 1 | "Hi" | false | { a: 1; b: 2 } | { a: 3; b: 4 }
+  >();
+});
+
+test("InferErrorType", () => {
+  type Expectation = InferErrorType<
+    | Result<number, 0>
+    | Result<number, 1>
+    | Ok<string, "Hi">
+    | Error<boolean, false>
+    | Ok<string, { code: "ERROR" }>
+    | Ok<string, { code: "HELP" }>
+  >;
+
+  const x: Expectation = null as unknown as Expectation;
+  expectTypeOf(x).toMatchTypeOf<
+    0 | 1 | "Hi" | false | { code: "ERROR" } | { code: "HELP" }
+  >();
+});
 
 test("Result.match can return two distinct types as a union", () => {
   expectTypeOf(
@@ -17,27 +50,65 @@ test("Result.match can return two distinct types as a union", () => {
 });
 
 test("Result.mapOr can return two distinct types as a union", () => {
-  expectTypeOf(Result.Ok(1).mapOr(0, (val) => `${val * 2}`)).toMatchTypeOf<
-    number | string
-  >();
-  expectTypeOf(Result.Error(1).mapOr(0, (val) => `${val * 2}`)).toMatchTypeOf<
-    number | string
-  >();
+  expectTypeOf(
+    Result.Ok(1 as const).mapOr(0 as const, () => "TEST" as const)
+  ).toMatchTypeOf<0 | 1 | "TEST">();
+  expectTypeOf(
+    Result.Error(1 as const).mapOr(0 as const, () => "TEST" as const)
+  ).toMatchTypeOf<0 | 1 | "TEST">();
 });
 
 test("Result.mapOrElse can return two distinct types as a union", () => {
   expectTypeOf(
     Result.Ok(1).mapOrElse(
       () => 0 as const,
-      (val) => `${val * 2}`
+      () => "TEST" as const
     )
-  ).toMatchTypeOf<0 | string>();
+  ).toMatchTypeOf<0 | "TEST">();
   expectTypeOf(
-    Result.Error(1).mapOrElse(
+    Result.Error(1 as const).mapOrElse(
       () => 0 as const,
-      (val) => `${val * 2}`
+      () => "TEST" as const
     )
-  ).toMatchTypeOf<0 | string>();
+  ).toMatchTypeOf<0 | "TEST">();
+});
+
+test("Result.andThen can return two distinct types as a union", () => {
+  expectTypeOf(
+    Result.Ok<"YES", "ERROR">("YES").andThen(() => {
+      let a = Math.random();
+
+      if (a > 0.5) {
+        return Result.Error("HELP" as const);
+      }
+
+      if (a < 0.3) {
+        return Result.Error(1 as const);
+      }
+
+      return Result.Ok(0 as const);
+    })
+    // Error type gets appended to, new Ok type
+  ).toMatchTypeOf<Result<0, "HELP" | 1 | "ERROR">>();
+});
+
+test("Result.orElse can return two distinct types as a union", () => {
+  expectTypeOf(
+    Result.Error<"YES", "ERROR">("ERROR").orElse(() => {
+      let a = Math.random();
+
+      if (a > 0.5) {
+        return Result.Error("HELP" as const);
+      }
+
+      if (a < 0.3) {
+        return Result.Error(1 as const);
+      }
+
+      return Result.Ok(0 as const);
+    })
+    // Ok type gets appended to, new error type
+  ).toMatchTypeOf<Result<0 | "YES", "HELP" | 1>>();
 });
 
 test("Result.fromJSON being used doesn't type error", () => {

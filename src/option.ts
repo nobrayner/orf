@@ -151,7 +151,9 @@ interface IOption<T> {
    * // result === Option.None()
    * ```
    */
-  andThen<O extends Option<any>>(fn: (t: T) => O): Option<InferInnerType<O>>;
+  andThen<O extends Option<any | never>>(
+    fn: (t: T) => O
+  ): Option<InferInnerType<O> | T>;
 
   /**
    * Returns `other` if the option is `None`, otherwise returns the existing `Some<T>`
@@ -184,7 +186,9 @@ interface IOption<T> {
    * // result === Option.Some(2)
    * ```
    */
-  orElse(fn: () => Option<T>): Option<T>;
+  orElse<O extends Option<any | never>>(
+    fn: () => O
+  ): Option<InferInnerType<O> | T>;
 
   /**
    * Runs the provided function with `Readonly<T>` if the option is `Some`, and then
@@ -330,33 +334,16 @@ export type JsonOption<T> = { __orf_type__: "Option" } & (
 export namespace Option {
   /**
    * Creates a `Some<T>` with the provided value
-   *
-   * ## Example
-   * ```ts
-   * const opt = Option.Some(1);
-   * // opt === Option.Some(1)
-   * ```
    */
   export function Some<T>(t: T): Some<T> {
-    const some = new __Some(t);
-    Object.freeze(some);
-    return some;
+    return Object.freeze(new __Some(t));
   }
 
   /**
    * Creates a `None<T>`
-   *
-   * ## Example
-   * ```ts
-   * const opt = Option.None();
-   * // opt === Option<never>.None()
-   *
-   * const opt ll Option.None<number>();
-   * // opt === Option<number>.None()
-   * ```
    */
   export function None<T = never>(): None<T> {
-    return NONE;
+    return NONE as unknown as None<T>;
   }
 
   /**
@@ -450,7 +437,9 @@ class __Some<T> implements IOption<T> {
     return other;
   }
 
-  andThen<O extends Option<any>>(fn: (t: T) => O): Option<InferInnerType<O>> {
+  andThen<O extends Option<any | never>>(
+    fn: (t: T) => O
+  ): Option<InferInnerType<O> | T> {
     return fn(this.value);
   }
 
@@ -458,7 +447,9 @@ class __Some<T> implements IOption<T> {
     return this;
   }
 
-  orElse(_fn: () => Option<T>): Option<T> {
+  orElse<O extends Option<any | never>>(
+    _fn: () => O
+  ): Option<InferInnerType<O> | T> {
     return this;
   }
 
@@ -523,17 +514,19 @@ class __None<T> implements IOption<T> {
     return this as unknown as Option<U>;
   }
 
-  // The type signature here is different as there is no way to infer the
-  // new option type, as we will never actually get the new Option as a result.
-  andThen<O extends Option<any>>(_fn: (t: T) => O): Option<never> {
-    return this as unknown as Option<never>;
+  andThen<O extends Option<any | never>>(
+    _fn: (t: T) => O
+  ): Option<InferInnerType<O> | T> {
+    return this;
   }
 
   or(other: Option<T>): Option<T> {
     return other;
   }
 
-  orElse(fn: () => Option<T>): Option<T> {
+  orElse<O extends Option<any | never>>(
+    fn: () => O
+  ): Option<InferInnerType<O> | T> {
     return fn();
   }
 

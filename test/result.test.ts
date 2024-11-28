@@ -104,8 +104,8 @@ test("Result.mapOrElse", () => {
 });
 
 test("Result.mapErr", () => {
-  expect(ok.mapErr(() => "NEW ERROR")).toBe(ok);
-  expect(error.mapErr(() => "NEW ERROR")).toStrictEqual(
+  expect(ok.mapError(() => "NEW ERROR")).toBe(ok);
+  expect(error.mapError(() => "NEW ERROR")).toStrictEqual(
     Result.Error("NEW ERROR")
   );
 });
@@ -152,7 +152,7 @@ test("Result.tap", () => {
   expect(fn).toHaveBeenCalledTimes(1);
   expect(ok_tap).toBe(ok);
 
-  fn.mockReset();
+  fn.mockClear();
 
   const error_tap = error.tap(fn);
   expect(fn).not.toHaveBeenCalled();
@@ -166,7 +166,7 @@ test("Result.tapError", () => {
   expect(fn).not.toHaveBeenCalled();
   expect(ok_tap).toBe(ok);
 
-  fn.mockReset();
+  fn.mockClear();
 
   const error_tap = error.tapError(fn);
   expect(fn).toHaveBeenCalledWith("ERROR");
@@ -185,8 +185,8 @@ test("Result.unwrap", () => {
 });
 
 test("Result.unwrapErr", () => {
-  expect(() => ok.unwrapErr()).toThrowError();
-  expect(error.unwrapErr()).toBe("ERROR");
+  expect(() => ok.unwrapError()).toThrowError();
+  expect(error.unwrapError()).toBe("ERROR");
 });
 
 test("Result.unwrapOr", () => {
@@ -235,18 +235,15 @@ test("Result.fromJSON", () => {
 });
 
 test("Result.all", () => {
-  expect(Result.all([Result.Ok(1), Result.Ok(2)])).toStrictEqual(
-    Result.Ok([1, 2])
-  );
-  expect(Result.all([Result.Ok(1), Result.Error("ERROR")])).toStrictEqual(
-    Result.Error("ERROR")
-  );
-  expect(Result.all([Result.Error("ERROR"), Result.Ok(1)])).toStrictEqual(
-    Result.Error("ERROR")
-  );
-  expect(
-    Result.all([Result.Error("ERROR1"), Result.Error("ERROR2")])
-  ).toStrictEqual(Result.Error("ERROR1"));
+  const ok1 = Result.Ok(1);
+  const ok2 = Result.Ok(2);
+  const error1 = Result.Error("ERROR1");
+  const error2 = Result.Error("ERROR2");
+
+  expect(Result.all([ok1, ok2])).toStrictEqual(Result.Ok([1, 2]));
+  expect(Result.all([ok1, error1])).toStrictEqual(Result.Error("ERROR1"));
+  expect(Result.all([error1, ok1])).toStrictEqual(Result.Error("ERROR1"));
+  expect(Result.all([error1, error2])).toStrictEqual(Result.Error("ERROR1"));
 });
 
 test("Result.allFromDict", () => {

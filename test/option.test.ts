@@ -101,7 +101,7 @@ test("Option.tap", () => {
   expect(fn).toHaveBeenCalledTimes(1);
   expect(some_tap).toBe(some);
 
-  fn.mockReset();
+  fn.mockClear();
 
   const none_tap = none.tap(fn);
   expect(fn).not.toHaveBeenCalled();

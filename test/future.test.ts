@@ -1,5 +1,5 @@
 import { expect, test, vi } from "vitest";
-import { Future, FallibleFuture, Result, Option } from "../src/orf";
+import { Future, Result, Option } from "../src/orf";
 
 test("Future.value", async () => {
   const future = Future.value(1);

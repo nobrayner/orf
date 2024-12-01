@@ -1,13 +1,5 @@
 import { Result } from "./result";
-
-/**
- * Infer the inner type of an Option
- */
-type InferInnerType<O> = O extends Some<infer T>
-  ? T
-  : O extends None<infer T>
-  ? T
-  : never;
+import type { orf } from "./types";
 
 interface IOption<T> {
   /**
@@ -153,7 +145,7 @@ interface IOption<T> {
    */
   andThen<O extends Option<any | never>>(
     fn: (t: T) => O
-  ): Option<InferInnerType<O> | T>;
+  ): Option<orf.InferInnerType<O> | T>;
 
   /**
    * Returns `other` if the option is `None`, otherwise returns the existing `Some<T>`
@@ -188,7 +180,7 @@ interface IOption<T> {
    */
   orElse<O extends Option<any | never>>(
     fn: () => O
-  ): Option<InferInnerType<O> | T>;
+  ): Option<orf.InferInnerType<O> | T>;
 
   /**
    * Runs the provided function with `Readonly<T>` if the option is `Some`, and then
@@ -439,7 +431,7 @@ class __Some<T> implements IOption<T> {
 
   andThen<O extends Option<any | never>>(
     fn: (t: T) => O
-  ): Option<InferInnerType<O> | T> {
+  ): Option<orf.InferInnerType<O> | T> {
     return fn(this.value);
   }
 
@@ -449,7 +441,7 @@ class __Some<T> implements IOption<T> {
 
   orElse<O extends Option<any | never>>(
     _fn: () => O
-  ): Option<InferInnerType<O> | T> {
+  ): Option<orf.InferInnerType<O> | T> {
     return this;
   }
 
@@ -516,7 +508,7 @@ class __None<T> implements IOption<T> {
 
   andThen<O extends Option<any | never>>(
     _fn: (t: T) => O
-  ): Option<InferInnerType<O> | T> {
+  ): Option<orf.InferInnerType<O> | T> {
     return this;
   }
 
@@ -526,7 +518,7 @@ class __None<T> implements IOption<T> {
 
   orElse<O extends Option<any | never>>(
     fn: () => O
-  ): Option<InferInnerType<O> | T> {
+  ): Option<orf.InferInnerType<O> | T> {
     return fn();
   }
 

@@ -1,8 +1,9 @@
 import { test, expectTypeOf } from "vitest";
-import { Result, InferOkType, InferErrorType, Ok, Error } from "../src/result";
+import { Result, Ok, Error } from "../src/result";
+import type { orf } from "../src/types";
 
 test("InferOkType", () => {
-  type Expectation = InferOkType<
+  type Expectation = orf.InferOkType<
     | Result<0, string>
     | Result<1, string>
     | Ok<"Hi", number>
@@ -19,7 +20,7 @@ test("InferOkType", () => {
 });
 
 test("InferErrorType", () => {
-  type Expectation = InferErrorType<
+  type Expectation = orf.InferErrorType<
     | Result<number, 0>
     | Result<number, 1>
     | Ok<string, "Hi">

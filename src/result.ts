@@ -1,9 +1,7 @@
 import { Option } from "./option";
+import type { orf } from "./types";
 
 const JSError = Error;
-
-export type InferOkType<T> = T extends Result<infer U, any> ? U : never;
-export type InferErrorType<T> = T extends Result<any, infer U> ? U : never;
 
 interface IResult<T, E> {
   /**
@@ -165,7 +163,7 @@ interface IResult<T, E> {
    */
   andThen<R extends Result<any, any>>(
     and_fn: (t: T) => R
-  ): Result<InferOkType<R>, InferErrorType<R> | E>;
+  ): Result<orf.InferOkType<R>, orf.InferErrorType<R> | E>;
 
   /**
    * Returns `or_value` if the result is an `Error`, otherwise returns
@@ -201,7 +199,7 @@ interface IResult<T, E> {
    */
   orElse<R extends Result<unknown, unknown>>(
     or_fn: (e: E) => R
-  ): Result<InferOkType<R> | T, InferErrorType<R>>;
+  ): Result<orf.InferOkType<R> | T, orf.InferErrorType<R>>;
 
   /**
    * Runs `fn` with `Readonly<T>` if the result is `Ok`, and then returns
@@ -463,9 +461,9 @@ export namespace Result {
     array: [...T]
   ): Result<
     {
-      [I in keyof T]: InferOkType<T[I]>;
+      [I in keyof T]: orf.InferOkType<T[I]>;
     },
-    InferErrorType<T[number]>
+    orf.InferErrorType<T[number]>
   > {
     let values: any = [];
 
@@ -504,7 +502,10 @@ export namespace Result {
    */
   export function allFromDict<D extends { [K: PropertyKey]: Result<any, any> }>(
     dict: D
-  ): Result<{ [K in keyof D]: InferOkType<D[K]> }, InferErrorType<D[keyof D]>> {
+  ): Result<
+    { [K in keyof D]: orf.InferOkType<D[K]> },
+    orf.InferErrorType<D[keyof D]>
+  > {
     let return_dict: any = {};
 
     for (const key in dict) {
@@ -585,8 +586,11 @@ class __Ok<T, E> implements IResult<T, E> {
 
   andThen<R extends Result<any, any>>(
     and_fn: (t: T) => R
-  ): Result<InferOkType<R>, InferErrorType<R> | E> {
-    return and_fn(this.value) as Result<InferOkType<R>, InferErrorType<R> | E>;
+  ): Result<orf.InferOkType<R>, orf.InferErrorType<R> | E> {
+    return and_fn(this.value) as Result<
+      orf.InferOkType<R>,
+      orf.InferErrorType<R> | E
+    >;
   }
 
   or<F, U = T>(_or_value: Result<U, F>): Result<T | U, F> {
@@ -595,8 +599,8 @@ class __Ok<T, E> implements IResult<T, E> {
 
   orElse<R extends Result<any, any>>(
     _or_fn: (e: E) => R
-  ): Result<InferOkType<R> | T, InferErrorType<R>> {
-    return this as Result<T, InferErrorType<R>>;
+  ): Result<orf.InferOkType<R> | T, orf.InferErrorType<R>> {
+    return this as Result<T, orf.InferErrorType<R>>;
   }
 
   tap(fn: (t: Readonly<T>) => void): Result<T, E> {
@@ -672,8 +676,8 @@ class __Error<T, E> implements IResult<T, E> {
 
   andThen<R extends Result<any, any>>(
     _and_fn: (t: T) => R
-  ): Result<InferOkType<R>, InferErrorType<R> | E> {
-    return this as Result<InferOkType<R>, E>;
+  ): Result<orf.InferOkType<R>, orf.InferErrorType<R> | E> {
+    return this as Result<orf.InferOkType<R>, E>;
   }
 
   or<F, U = T>(or_value: Result<U, F>): Result<T | U, F> {
@@ -682,7 +686,7 @@ class __Error<T, E> implements IResult<T, E> {
 
   orElse<R extends Result<any, any>>(
     or_fn: (e: E) => R
-  ): Result<InferOkType<R> | T, InferErrorType<R>> {
+  ): Result<orf.InferOkType<R> | T, orf.InferErrorType<R>> {
     return or_fn(this.error);
   }
 

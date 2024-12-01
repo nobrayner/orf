@@ -1,17 +1,6 @@
 import { Option } from "./option";
 import { Result } from "./result";
-
-type InferOkType<T> = T extends FallibleFuture<infer U, infer _>
-  ? U
-  : T extends Result<infer U, infer _>
-  ? U
-  : never;
-
-type InferErrorType<T> = T extends FallibleFuture<infer _, infer F>
-  ? F
-  : T extends Result<infer _, infer F>
-  ? F
-  : never;
+import { orf } from "./types";
 
 export namespace Future {
   /**
@@ -276,8 +265,8 @@ export namespace Future {
   >(
     dict: D
   ): FallibleFuture<
-    { [K in keyof D]: InferOkType<D[K]> },
-    InferErrorType<D[keyof D]>
+    { [K in keyof D]: orf.InferOkType<D[K]> },
+    orf.InferErrorType<D[keyof D]>
   >;
   export function allFromDict<D extends { [K: PropertyKey]: Future<any> }>(
     dict: D
@@ -296,7 +285,7 @@ export namespace Future {
         ? U
         : never;
     },
-    InferErrorType<D[keyof D]>
+    orf.InferErrorType<D[keyof D]>
   >;
   export function allFromDict(
     dict: Record<PropertyKey, Future<any> | FallibleFuture<any, any>>
@@ -840,7 +829,7 @@ class __FallibleFuture<T, E> {
    */
   andThen<F extends Result<any, any> | FallibleFuture<any, any>>(
     then_fn: (t: T) => F
-  ): FallibleFuture<InferOkType<F>, InferErrorType<F> | E> {
+  ): FallibleFuture<orf.InferOkType<F>, orf.InferErrorType<F> | E> {
     const future = Future.makeFallible<any, any>((success, fail) => {
       this.onResolved((result) => {
         result.match({
@@ -864,7 +853,7 @@ class __FallibleFuture<T, E> {
 
   orElse<R extends Result<any, any> | FallibleFuture<any, any>>(
     or_fn: (e: E) => R
-  ): FallibleFuture<InferOkType<R> | T, InferErrorType<R>> {
+  ): FallibleFuture<orf.InferOkType<R> | T, orf.InferErrorType<R>> {
     const future = Future.makeFallible<any, any>((success, fail) => {
       this.onResolved((result) => {
         result.match({

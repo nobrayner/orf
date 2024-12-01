@@ -1,5 +1,11 @@
 # orf
 
+## 0.0.2
+
+### Patch Changes
+
+- 19b039c: Future.fromFallible now accepts promises as an argument, and returns a FallibleFuture based on the promise
+
 ## 0.0.1
 
 ### Patch Changes

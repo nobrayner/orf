@@ -72,16 +72,28 @@ test("Future.makeFallible", async () => {
 });
 
 test("Future.fromFallible", async () => {
-  const can_fn = vi.fn();
+  const f1 = Future.fromFallible(Result.Ok(100));
+  expect(Future.isFallibleFuture(f1)).toBe(true);
+  await expect(f1).resolves.toStrictEqual(Option.Some(Result.Ok(100)));
 
-  const future = Future.fromFallible(Result.Ok(100));
-  future.onSucceeded((value) => {
-    expect(value).toBe(100);
-  });
-  future.onCancelled(can_fn);
+  const base_fallible_future = Future.success(true);
+  const f2 = Future.fromFallible(base_fallible_future);
+  expect(Future.isFallibleFuture(f2)).toBe(true);
+  expect(f2).toBe(base_fallible_future);
+  await expect(f2).resolves.toStrictEqual(Option.Some(Result.Ok(true)));
 
-  await expect(future).resolves.toStrictEqual(Option.Some(Result.Ok(100)));
-  expect(can_fn).not.toHaveBeenCalled();
+  const f3 = Future.fromFallible(Promise.resolve("Hello"));
+  expect(Future.isFallibleFuture(f3)).toBe(true);
+  await expect(f3).resolves.toStrictEqual(Option.Some(Result.Ok("Hello")));
+
+  const async_fn = async () => {
+    return { code: "TEST" };
+  };
+  const f4 = Future.fromFallible(async_fn());
+  expect(Future.isFallibleFuture(f4)).toBe(true);
+  await expect(f4).resolves.toStrictEqual(
+    Option.Some(Result.Ok({ code: "TEST" }))
+  );
 });
 
 test("Future.cancel", async () => {

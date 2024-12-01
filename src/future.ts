@@ -13,36 +13,6 @@ type InferErrorType<T> = T extends FallibleFuture<infer _, infer F>
   ? F
   : never;
 
-// interface IFuture<T> {
-//   map<U>(map_fn: (t: T) => U): Future<U>;
-//
-//   andThen<U>(then_fn: (t: T) => U): Future<U extends Future<infer V> ? V : U>;
-//
-//   tap(tap_fn: (t: T) => void): Future<T>;
-//
-//   never_error(): FallibleFuture<T, never>;
-// }
-//
-// interface IFallibleFuture<T, E> {
-//   map<U>(map_fn: (t: T) => U): FallibleFuture<U, E>;
-//
-//   mapError<F>(map_fn: (e: E) => F): FallibleFuture<T, F>;
-//
-//   andThen<R extends Result<any, any> | FallibleFuture<any, any>>(
-//     then_fn: (t: T) => R
-//   ): FallibleFuture<InferOkType<R>, InferErrorType<R> | E>;
-//
-//   orElse<R extends Result<any, any> | FallibleFuture<any, any>>(
-//     or_fn: (e: E) => R
-//   ): FallibleFuture<InferOkType<R> | T, InferErrorType<R>>;
-//
-//   tap(tap_fn: (t: T) => void): FallibleFuture<T, E>;
-//
-//   tapError(tap_fn: (e: E) => void): FallibleFuture<T, E>;
-//
-//   ok(): Future<Option<T>>;
-// }
-
 export namespace Future {
   /**
    * Creates a `Future<T>` that is already resolved with the provided value.
@@ -109,17 +79,25 @@ export namespace Future {
   }
 
   /**
-   * Creates a new `FallibleFuture<T, E>` from the given `Result<T, E>`, or
-   * returns the given `FallibleFuture<T, E>` as is.
+   * Creates a new `FallibleFuture<T, E>` from the given "Fallible":
+   * - `Result<T, E>` as `FallibleFuture<T, E>`
+   * - `FallibleFuture<T, E>` as is
+   * - `Promise<T>` as `FallibleFuture<T, unknown>`
    */
-  export function fromFallible<T, E>(
-    f: Result<T, E> | FallibleFuture<T, E>
+  export function fromFallible<T, E = unknown>(
+    fallible: Result<T, E> | FallibleFuture<T, E> | Promise<T>
   ): FallibleFuture<T, E> {
-    if (f instanceof __FallibleFuture) {
-      return f;
+    if (fallible instanceof __FallibleFuture) {
+      return fallible;
     }
 
-    return f.match({
+    if (fallible instanceof Promise) {
+      return Future.makeFallible<T, E>((s, f) => {
+        fallible.then(s).catch(f);
+      });
+    }
+
+    return fallible.match({
       Ok: (value) => success(value),
       Error: (error) => fail(error),
     });

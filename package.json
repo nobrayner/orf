@@ -1,5 +1,5 @@
 {
-  "name": "orf",
+  "name": "@nobrayner/orf",
   "version": "0.0.1",
   "description": "Option. Result. Future",
   "sideEffect": false,

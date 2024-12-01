@@ -1,6 +1,6 @@
 {
   "name": "orf",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "description": "Option. Result. Future",
   "sideEffect": false,
   "main": "lib/orf.js",

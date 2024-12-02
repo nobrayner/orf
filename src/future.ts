@@ -1106,10 +1106,10 @@ class __FallibleFuture<T, E> {
    * // Throws an exception
    * ```
    */
-  unwrapOr<U = T>(
-    or_value: Result<T | U, E>
-  ): UnwrappedFuture<Result<T | U, E>> {
-    const future = new __UnwrappedFuture<Result<T | U, E>>({
+  unwrapOr<U = T, F = E>(
+    or_value: Result<T | U, E | F>
+  ): UnwrappedFuture<Result<T | U, E | F>> {
+    const future = new __UnwrappedFuture<Result<T | U, E | F>>({
       tag: "pending",
       execute: (resolve) => {
         this.onResolved(resolve);
@@ -1144,10 +1144,10 @@ class __FallibleFuture<T, E> {
    * // Throws an exception
    * ```
    */
-  unwrapOrElse<U = T>(
-    or_fn: () => Result<T | U, E>
-  ): UnwrappedFuture<Result<T | U, E>> {
-    const future = new __UnwrappedFuture<Result<T | U, E>>({
+  unwrapOrElse<U = T, F = E>(
+    or_fn: () => Result<T | U, E | F>
+  ): UnwrappedFuture<Result<T | U, E | F>> {
+    const future = new __UnwrappedFuture<Result<T | U, E | F>>({
       tag: "pending",
       execute: (resolve) => {
         this.onResolved(resolve);
@@ -1164,6 +1164,25 @@ class __FallibleFuture<T, E> {
     return future;
   }
 
+  /**
+   * Runs the function provided in the `Ok` or `Error` branch, passing the value
+   * or error respectively
+   *
+   * ## Example
+   * ```ts
+   * const result = Future.success(1).match({
+   *   Ok: (value) => value,
+   *   Error: (error) => error,
+   * });
+   * // result === 1
+   *
+   * const result = Future.fail("error").match({
+   *   Ok: (value) => value,
+   *   Error: (error) => error,
+   * });
+   * // result === "error"
+   *  ```
+   */
   match<U, V = U>(config: {
     Ok: (t: T) => U;
     Error: (e: E) => V;

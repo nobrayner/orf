@@ -226,30 +226,135 @@ export namespace Future {
     });
   }
 
-  export function all<T extends Array<Future<any> | FallibleFuture<any, any>>>(
-    array: [...T]
+  /**
+   * Creates a new `Future` that resolves to a tuple of the passed future's resolved
+   * values. Similiar to `Promise.all`
+   *
+   * ## Example
+   * ```ts
+   * const result = await Future.all([Future.value(1), Future.value("hi")]);
+   * // result === Option.Some([1, "hi"])
+   *```
+   */
+  export function all<A extends Array<Future<any>>>(
+    array: [...A]
   ): Future<{
-    [K in keyof T]: T[K] extends Future<infer U>
-      ? U
-      : T[K] extends FallibleFuture<infer U, infer F>
-      ? Result<U, F>
-      : never;
-  }> {
-    const future = Future.make<any>((resolve) => {
+    [K in keyof A]: A[K] extends Future<infer U> ? U : never;
+  }>;
+  /**
+   * Creates a new `FallibleFuture` that resolves to a tuple of the passed future's
+   * resolved values. Similiar to `Promise.all` and `Result.all`
+   *
+   * If any of the `FallibleFuture`s resolve to an `Error`, the first `Error` found
+   * is returned. Otherwise, an `Ok` is returned with a tuple of the resolved `Ok`
+   * values
+   *
+   * ## Example
+   * ```ts
+   * const result = await Future.all([Future.success(1), Future.success("hi")]);
+   * // result === Option.Some(Result.Ok([1, "hi"]))
+   *
+   * const result = await Future.all([
+   *   Future.success(1),
+   *   Future.fail("error1"),
+   *   Future.fail("error2"),
+   *]);
+   * // result === Option.Some(Result.Error("error1"))
+   *```
+   */
+  export function all<A extends Array<FallibleFuture<any, any>>>(
+    array: [...A]
+  ): FallibleFuture<
+    { [K in keyof A]: orf.InferOkType<A[K]> },
+    orf.InferErrorType<A[number]>
+  >;
+  /**
+   * Creates a new `FallibleFuture` that resolves to a tuple of the passed future's
+   * resolved values. Similiar to `Promise.all` and `Result.all`. For any `Future`
+   * passed in, it will convert it to a `FallibleFuture<T, never>`
+   *
+   * If any of the `FallibleFuture`s resolve to an `Error`, the first `Error` found
+   * is returned. Otherwise, an `Ok` is returned with a tuple of the resolved `Ok`
+   * values
+   *
+   * ## Example
+   * ```ts
+   * const result = await Future.all([Future.success(1), Future.success("hi")]);
+   * // result === Option.Some(Result.Ok([1, "hi"]))
+   *
+   * const result = await Future.all([
+   *   Future.success(1),
+   *   Future.fail("error1"),
+   *   Future.fail("error2"),
+   *]);
+   * // result === Option.Some(Result.Error("error1"))
+   *```
+   */
+  export function all<A extends Array<Future<any> | FallibleFuture<any, any>>>(
+    array: [...A]
+  ): FallibleFuture<
+    {
+      [K in keyof A]: A[K] extends FallibleFuture<infer U, infer _>
+        ? U
+        : A[K] extends Future<infer U>
+        ? U
+        : never;
+    },
+    orf.InferErrorType<A[number]>
+  >;
+  export function all(array: (Future<any> | FallibleFuture<any, any>)[]): any {
+    const has_fallible = array.some(Future.isFallibleFuture);
+
+    if (!has_fallible) {
+      const future = Future.make<any>((resolve) => {
+        const results: Array<any> = new Array(array.length);
+
+        let count = 0;
+
+        array.forEach((f, i) => {
+          f.onResolved((value) => {
+            results[i] = value;
+            count += 1;
+
+            if (count === array.length) {
+              resolve(results);
+            }
+          });
+        });
+
+        // Propagate cancel
+        return () => array.forEach((f) => f.cancel());
+      });
+
+      array.forEach((f) => f.onCancelled(future.cancel.bind(future)));
+
+      return future;
+    }
+
+    const future = Future.makeFallible<any, any>((ok, error) => {
       const results: Array<any> = new Array(array.length);
 
       let count = 0;
 
-      array.forEach((f, i) => {
-        f.onResolved((value) => {
-          results[i] = value;
+      for (let i = 0; i < array.length; ++i) {
+        let f = array[i]!;
+
+        if (Future.isFuture(f)) {
+          f = f.neverError();
+        }
+
+        f.onResolved((result) => {
+          results[i] = result;
           count += 1;
 
           if (count === array.length) {
-            resolve(results);
+            Result.all(results).match({
+              Ok: ok,
+              Error: error,
+            });
           }
         });
-      });
+      }
 
       // Propagate cancel
       return () => array.forEach((f) => f.cancel());
@@ -328,7 +433,7 @@ export namespace Future {
       return future;
     }
 
-    const future = Future.makeFallible<any, any>((success, fail) => {
+    const future = Future.makeFallible<any, any>((ok, error) => {
       const results: Record<PropertyKey, Result<any, any>> = {};
 
       let count = 0;
@@ -346,8 +451,8 @@ export namespace Future {
 
           if (count === item_count) {
             Result.allFromDict(results).match({
-              Ok: success,
-              Error: fail,
+              Ok: ok,
+              Error: error,
             });
           }
         });
@@ -474,8 +579,8 @@ class __Future<T> {
    *
    * ## Example
    * ```ts
-   * const result = await Future.value(1).map((val) => `${val * 2}`);
-   * // result === Option.Some("2")
+   * const value = await Future.value(1).map((val) => `${val * 2}`);
+   * // value === Option.Some("2")
    * ```
    */
   map<U>(map_fn: (t: T) => U): Future<U> {
@@ -499,8 +604,9 @@ class __Future<T> {
    *
    * ## Example
    * ```ts
-   * const future = await Future.value(1).tap((val) => console.log(val));
-   * // future === Option.Some(1)
+   * const value = await Future.value(1).tap((val) => console.log(val));
+   * // value === Option.Some(1)
+   * ```
    */
   tap(tap_fn: (t: T) => void): Future<T> {
     this.onResolved(tap_fn);
@@ -513,8 +619,8 @@ class __Future<T> {
    *
    * ## Example
    * ```ts
-   * const future = await Future.value(1).never_error();
-   * // future === Option.Some(Result.Ok(1))
+   * const value = await Future.value(1).never_error();
+   * // value === Option.Some(Result.Ok(1))
    * ```
    */
   neverError(): FallibleFuture<T, never> {
@@ -572,6 +678,7 @@ class __Future<T> {
    * future.cancel();
    * const value = await future;
    * // value === 0
+   * ```
    */
   unwrapOr<U = T>(or_value: U): UnwrappedFuture<T | U> {
     const future = new __UnwrappedFuture<T | U>({
@@ -759,8 +866,8 @@ class __FallibleFuture<T, E> {
    *
    * ## Example
    * ```ts
-   * const result = await Future.success(1).map((val) => `${val * 2}`);
-   * // result === Option.Some(Result.Ok("2"))
+   * const value = await Future.success(1).map((val) => `${val * 2}`);
+   * // value === Option.Some(Result.Ok("2"))
    * ```
    */
   map<U>(map_fn: (t: T) => U): FallibleFuture<U, E> {
@@ -789,8 +896,8 @@ class __FallibleFuture<T, E> {
    *
    * ## Example
    * ```ts
-   * const result = await Future.fail(1).map((val) => `${val * 2}`);
-   * // result === Option.Some(Result.Error("2"))
+   * const value = await Future.fail(1).map((val) => `${val * 2}`);
+   * // value === Option.Some(Result.Error("2"))
    * ```
    */
   mapError<F>(map_fn: (e: E) => F): FallibleFuture<T, F> {
@@ -820,11 +927,11 @@ class __FallibleFuture<T, E> {
    *
    * ## Example
    * ```ts
-   * const future = await Future.success(1).andThen((val) => Future.success(`${val * 2}`));
-   * // future === Option.Some(Result.Ok("2"))
+   * const value = await Future.success(1).andThen((val) => Future.success(`${val * 2}`));
+   * // value === Option.Some(Result.Ok("2"))
    *
-   * const future = await Future.fail("ERROR").andThen((val) => Future.success(`${val * 2}`));
-   * // future === Option.Some(Result.Error("ERROR"))
+   * const value = await Future.fail("ERROR").andThen((val) => Future.success(`${val * 2}`));
+   * // value === Option.Some(Result.Error("ERROR"))
    * ```
    */
   andThen<F extends Result<any, any> | FallibleFuture<any, any>>(
@@ -851,6 +958,20 @@ class __FallibleFuture<T, E> {
     return future;
   }
 
+  /**
+   * Executes another FallibleFuture after this one resolves with an error.
+   * The error value `E` is passed to `or_fn` to create this subsequent
+   * FallibleFuture.
+   *
+   * ## Example
+   * ```ts
+   * const value = await Future.fail("ERROR").orElse((error) => Future.success(`${error}!`));
+   * // value === Option.Some(Result.Ok("ERROR!"))
+   *
+   * const value = await Future.success(1).orElse((error) => Future.success(`${error}!`));
+   * // value === Option.Some(Result.Ok(1))
+   * ```
+   */
   orElse<R extends Result<any, any> | FallibleFuture<any, any>>(
     or_fn: (e: E) => R
   ): FallibleFuture<orf.InferOkType<R> | T, orf.InferErrorType<R>> {
@@ -875,12 +996,46 @@ class __FallibleFuture<T, E> {
     return future;
   }
 
+  /**
+   * Runs the provided function with the resolved `T` of the future, returning
+   * the existing future.
+   *
+   * ## Example
+   * ```ts
+   * const future = Future.success(1);
+   * const tapped_future = future.tap((val) => console.log(val));
+   * // Logs "1"
+   * // future === tapped_future
+   *
+   * const future = Future.fail(1);
+   * const tapped_future = future.tap((val) => console.log(val));
+   * // Logs nothing
+   * // future === tapped_future
+   * ```
+   */
   tap(tap_fn: (t: T) => void): FallibleFuture<T, E> {
     this.onSucceeded(tap_fn);
 
     return this;
   }
 
+  /**
+   * Runs the provided function with the resolved `E` of the future, returning
+   * the existing future.
+   *
+   * ## Example
+   * ```ts
+   * const future = Future.success(1);
+   * const tapped_future = future.tap((val) => console.log(val));
+   * // Logs nothing
+   * // future === tapped_future
+   *
+   * const future = Future.fail(1);
+   * const tapped_future = future.tap((val) => console.log(val));
+   * // Logs "1"
+   * // future === tapped_future
+   * ```
+   */
   tapError(tap_fn: (e: E) => void): FallibleFuture<T, E> {
     this.onFailed(tap_fn);
 
@@ -901,30 +1056,30 @@ class __FallibleFuture<T, E> {
   }
 
   /**
-   * Returns the resolved `T` from this future, or throws an exception if the
-   * future was cancelled or failed.
+   * Returns the resolved `Result<T, E>` from this future, or throws an exception if the
+   * future was cancelled.
    *
    * **Prefer `unwrapOr` or `unwrapOrElse` over this method**
    *
    * ## Example
    * ```ts
    * const value = await Future.success(1).unwrap();
-   * // value === 1
+   * // value === Result.Ok(1)
    *
-   * const future = Future.success(1).unwrap();
+   * const value = await Future.fail("ERROR").unwrap();
+   * // value === Result.Error("ERROR")
+   *
+   * const value = Future.success(1).unwrap();
    * future.cancel();
    * const value = await future;
    * // Throws an exception
-   *
-   * const future = await Future.fail("ERROR").unwrap();
-   * // Throws an exception
    * ```
    */
-  unwrap(): UnwrappedFuture<T> {
-    const future = new __UnwrappedFuture<T>({
+  unwrap(): UnwrappedFuture<Result<T, E>> {
+    const future = new __UnwrappedFuture<Result<T, E>>({
       tag: "pending",
       execute: (resolve) => {
-        this.onResolved((result) => resolve(result.unwrap()));
+        this.onResolved(resolve);
       },
     });
 
@@ -934,61 +1089,30 @@ class __FallibleFuture<T, E> {
   }
 
   /**
-   * Returns the resolved `E` from this future, or throws an exception if the
-   * future was cancelled or succeeded.
-   *
-   * ## Example
-   * ```ts
-   * const value = await Future.fail("ERROR").unwrapError();
-   * // value === "ERROR"
-   *
-   * const future = Future.fail("ERROR").unwrapError();
-   * future.cancel();
-   * const value = await future;
-   * // Throws an exception
-   *
-   * const future = await Future.success(1).unwrapError();
-   * // Throws an exception
-   * ```
-   */
-  unwrapError(): UnwrappedFuture<E> {
-    const future = new __UnwrappedFuture<E>({
-      tag: "pending",
-      execute: (resolve) => {
-        this.onResolved((result) => resolve(result.unwrapError()));
-      },
-    });
-
-    this.onCancelled(future.cancel.bind(future));
-
-    return future;
-  }
-
-  /**
-   * Returns the resolved `T` from this future, or returns the provided `or_value`
-   * if the future was cancelled, or failed.
+   * Returns the resolved `Result<T, E>` from this future, or returns the provided `or_value`
+   * if the future was cancelled.
    *
    * ## Example
    * ```ts
    * const value = await Future.success(1).unwrapOr(0);
-   * // value === 1
+   * // value === Result.Ok(1)
    *
-   * const future = Future.success(1).unwrapOr(0);
+   * const value = await Future.fail("ERROR").unwrapOr(0);
+   * // value === Result.Error("ERROR")
+   *
+   * const value = Future.success(1).unwrapOr(0);
    * future.cancel();
    * const value = await future;
    * // Throws an exception
-   *
-   * const future = await Future.fail("ERROR").unwrapOr(0);
-   * // value === 0
    * ```
    */
-  unwrapOr<U = T>(or_value: U): UnwrappedFuture<T | U> {
-    const future = new __UnwrappedFuture<T | U>({
+  unwrapOr<U = T>(
+    or_value: Result<T | U, E>
+  ): UnwrappedFuture<Result<T | U, E>> {
+    const future = new __UnwrappedFuture<Result<T | U, E>>({
       tag: "pending",
       execute: (resolve) => {
-        this.onResolved((result) => {
-          resolve(result.unwrapOr(or_value));
-        });
+        this.onResolved(resolve);
         this.onCancelled(() => {
           resolve(or_value);
         });
@@ -1003,30 +1127,30 @@ class __FallibleFuture<T, E> {
   }
 
   /**
-   * Returns the resolved `T` from this future, or returns the result
-   * of running `or_fn` if the future was cancelled or failed.
+   * Returns the resolved `Result<T, E>` from this future, or returns the result
+   * of running `or_fn` if the future was cancelled.
    *
    * ## Example
    * ```ts
    * const value = await Future.success(1).unwrapOrElse(() => 0);
-   * // value === 1
+   * // value === Result.Ok(1)
+   *
+   * const value = await Future.fail("ERROR").unwrapOrElse(() => 0);
+   * // value === Result.Error("ERROR")
    *
    * const future = Future.success(1).unwrapOrElse(() => 0);
    * future.cancel();
    * const value = await future;
    * // Throws an exception
-   *
-   * const future = await Future.fail("ERROR").unwrapOrElse(() => 0);
-   * // value === 0
    * ```
    */
-  unwrapOrElse<U = T>(or_fn: () => U): UnwrappedFuture<T | U> {
-    const future = new __UnwrappedFuture<T | U>({
+  unwrapOrElse<U = T>(
+    or_fn: () => Result<T | U, E>
+  ): UnwrappedFuture<Result<T | U, E>> {
+    const future = new __UnwrappedFuture<Result<T | U, E>>({
       tag: "pending",
       execute: (resolve) => {
-        this.onResolved((result) => {
-          resolve(result.unwrapOrElse(or_fn));
-        });
+        this.onResolved(resolve);
         this.onCancelled(() => {
           resolve(or_fn());
         });

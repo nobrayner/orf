@@ -39,7 +39,7 @@ test("Make a database call and return the results", async () => {
     })
     .unwrap();
 
-  expect(result).toStrictEqual({ user_id: 1, thing: "some thing" });
+  expect(result).toStrictEqual(Result.Ok({ user_id: 1, thing: "some thing" }));
 });
 
 type User = {

@@ -344,49 +344,49 @@ test("FallibleFuture.ok", async () => {
 });
 
 test("FallibleFuture.unwrap", async () => {
-  await expect(Future.success(1).unwrap()).resolves.toBe(1);
+  await expect(Future.success(1).unwrap()).resolves.toStrictEqual(Result.Ok(1));
 
-  await expect(async () => Future.fail(1).unwrap()).rejects.toThrowError();
+  await expect(Future.fail(1).unwrap()).resolves.toStrictEqual(Result.Error(1));
 
   const future = Future.makeFallible((s) => s(1), { lazy: true });
   future.cancel();
   await expect(async () => future.unwrap()).rejects.toThrowError();
 });
 
-test("FallibleFuture.unwrapError", async () => {
-  await expect(Future.fail(1).unwrapError()).resolves.toBe(1);
-
-  await expect(async () =>
-    Future.success(1).unwrapError()
-  ).rejects.toThrowError();
-
-  const future = Future.makeFallible<number>((_, f) => f(1), { lazy: true });
-  future.cancel();
-  await expect(async () => future.unwrapError()).rejects.toThrowError();
-});
-
 test("FallibleFuture.unwrapOr", async () => {
-  await expect(Future.success(1).unwrapOr(0)).resolves.toBe(1);
+  await expect(Future.success(1).unwrapOr(Result.Ok(0))).resolves.toStrictEqual(
+    Result.Ok(1)
+  );
 
-  await expect(Future.fail(1).unwrapOr(0)).resolves.toBe(0);
+  await expect(Future.fail(1).unwrapOr(Result.Ok(0))).resolves.toStrictEqual(
+    Result.Error(1)
+  );
 
   const f1 = Future.makeFallible((s) => s(1), { lazy: true });
   f1.cancel();
-  await expect(f1.unwrapOr(0)).resolves.toBe(0);
+  await expect(f1.unwrapOr(Result.Ok(0))).resolves.toStrictEqual(Result.Ok(0));
 
-  const f2 = Future.makeFallible((s) => s(1), { lazy: true }).unwrapOr(0);
+  const f2 = Future.makeFallible((s) => s(1), { lazy: true }).unwrapOr(
+    Result.Ok(0)
+  );
   f2.cancel();
-  await expect(f2).resolves.toBe(0);
+  await expect(f2).resolves.toStrictEqual(Result.Ok(0));
 });
 
 test("FallibleFuture.unwrapOrElse", async () => {
-  await expect(Future.success(1).unwrapOrElse(() => 0)).resolves.toBe(1);
+  await expect(
+    Future.success(1).unwrapOrElse(() => Result.Ok(0))
+  ).resolves.toStrictEqual(Result.Ok(1));
 
-  await expect(Future.fail(1).unwrapOrElse(() => 0)).resolves.toBe(0);
+  await expect(
+    Future.fail(1).unwrapOrElse(() => Result.Ok(0))
+  ).resolves.toStrictEqual(Result.Error(1));
 
   const future = Future.makeFallible((s) => s(1), { lazy: true });
   future.cancel();
-  await expect(future.unwrapOrElse(() => 0)).resolves.toBe(0);
+  await expect(future.unwrapOrElse(() => Result.Ok(0))).resolves.toStrictEqual(
+    Result.Ok(0)
+  );
 });
 
 test("FallibleFuture.match", async () => {
@@ -417,14 +417,17 @@ test("Future.fromFallible", async () => {
 });
 
 test("Future.all", async () => {
-  await expect(
-    Future.all([
-      Future.value(1),
-      Future.success(2),
-      Future.fail(3),
-      Future.value(4),
-    ])
-  ).resolves.toStrictEqual(Option.Some([1, Result.Ok(2), Result.Error(3), 4]));
+  const f1 = Future.all([Future.value(1), Future.value(2)]);
+  expect(Future.isFuture(f1)).toBe(true);
+  await expect(f1).resolves.toStrictEqual(Option.Some([1, 2]));
+
+  const f2 = Future.all([Future.success(1), Future.success(2)]);
+  expect(Future.isFallibleFuture(f2)).toBe(true);
+  await expect(f2).resolves.toStrictEqual(Option.Some(Result.Ok([1, 2])));
+
+  const f3 = Future.all([Future.success(1), Future.fail(2)]);
+  expect(Future.isFallibleFuture(f3)).toBe(true);
+  await expect(f3).resolves.toStrictEqual(Option.Some(Result.Error(2)));
 });
 
 test("Future.allFromDict", async () => {
@@ -481,4 +484,36 @@ test("Future.allFromDict", async () => {
       d: Future.value("Hi"),
     })
   ).resolves.toStrictEqual(Option.Some(Result.Error("OH NO")));
+});
+
+test("Futures are awaitable", async () => {
+  await Future.makeFallible<number>((s) => {
+    s(1);
+  }).andThen(() =>
+    Future.makeFallible((s) => {
+      s(2);
+    })
+  );
+});
+
+test("Futures cannot directly call then, but can be awaited", async () => {
+  const f1 = Future.value(1);
+  // @ts-expect-error
+  f1.then();
+  await f1;
+
+  const f2 = Future.success(1);
+  // @ts-expect-error
+  f2.then();
+  await f2;
+
+  const f3 = Future.fail(1);
+  // @ts-expect-error
+  f3.then();
+  await f3;
+
+  const f4 = Future.value(1).unwrap();
+  // @ts-expect-error
+  f4.then();
+  await f4;
 });

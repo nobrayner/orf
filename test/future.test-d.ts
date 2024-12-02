@@ -55,7 +55,7 @@ test("Future.all can return union of types", () => {
   >();
 
   expectTypeOf(Future.all([Future.value(1), Future.fail("2")])).toMatchTypeOf<
-    Future<[number, Result<never, string>]>
+    FallibleFuture<[number, never], string>
   >();
 
   expectTypeOf(
@@ -65,9 +65,7 @@ test("Future.all can return union of types", () => {
       Future.success(1),
       Future.fail("BOO"),
     ])
-  ).toMatchTypeOf<
-    Future<[number, string, Result<number, never>, Result<never, string>]>
-  >();
+  ).toMatchTypeOf<FallibleFuture<[number, string, number, never], string>>();
 });
 
 test("Future.allFromDict can return union of types", () => {

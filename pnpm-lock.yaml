@@ -36,7 +36,7 @@ importers:
         specifier: ^6.2.3
         version: 6.7.0(postcss@8.4.49)(typescript@5.7.2)
       typescript:
-        specifier: ^5.7.2
+        specifier: ^5
         version: 5.7.2
       vite-node:
         specifier: ^2.1.6

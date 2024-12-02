@@ -40,16 +40,8 @@
     "@types/node": "^18.7.14",
     "prettier": "^2.7.1",
     "tsup": "^6.2.3",
-    "typescript": "^5.7.2",
+    "typescript": "^5",
     "vite-node": "^2.1.6",
     "vitest": "^2.1.5"
-  },
-  "peerDependencies": {
-    "typescript": ">=5.0.0"
-  },
-  "peerDependenciesMeta": {
-    "typescript": {
-      "optional": true
-    }
   }
 }

@@ -11,7 +11,8 @@
   "license": "MIT",
   "scripts": {
     "test": "vitest",
-    "build": "tsup",
+    "build": "tsup && pnpm cleanup-build",
+    "cleanup-build": "vite-node ./build_cleanup.ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "changeset": "changeset",
     "release": "pnpm build && pnpm changeset publish",
@@ -30,12 +31,17 @@
     }
   },
   "devDependencies": {
+    "@babel/generator": "^7.26.2",
+    "@babel/parser": "^7.26.2",
+    "@babel/traverse": "^7.25.9",
+    "@babel/types": "^7.26.0",
     "@changesets/changelog-github": "^0.4.6",
     "@changesets/cli": "^2.24.4",
     "@types/node": "^18.7.14",
     "prettier": "^2.7.1",
     "tsup": "^6.2.3",
     "typescript": "^5.7.2",
+    "vite-node": "^2.1.6",
     "vitest": "^2.1.5"
   },
   "peerDependencies": {

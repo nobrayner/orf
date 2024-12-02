@@ -1,5 +1,12 @@
 # orf
 
+## 0.0.5
+
+### Patch Changes
+
+- 4fbe589: Fixes a potential version mismatch issue where slightly different typescript versions would cause orf types to be incompatible with each other
+- 4fbe589: Fixes generics in the `unwrapOr` and `unwrapOrElse` methods in FallibleFuture. These now allow different error values as the "or"
+
 ## 0.0.4
 
 ### Patch Changes

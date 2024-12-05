@@ -161,6 +161,11 @@ test("Option.toJSON", () => {
     value: 1,
   });
   expect(none.toJSON()).toStrictEqual({ __orf_type__: "Option", tag: "None" });
+  expect(Option.Some<void>(undefined).toJSON()).toStrictEqual({
+    __orf_type__: "Option",
+    tag: "Some",
+    value: undefined,
+  });
 });
 
 test("Option.isOption", () => {
@@ -176,4 +181,12 @@ test("Option.fromJSON", () => {
 
   expect(Option.fromJSON(some_json)).toStrictEqual(some);
   expect(Option.fromJSON(none_json)).toStrictEqual(none);
+  expect(Option.fromJSON(Option.Some(undefined).toJSON())).toStrictEqual(
+    Option.Some(undefined)
+  );
+
+  const json_string = JSON.stringify(Option.Some<void>(undefined));
+  expect(Option.fromJSON(JSON.parse(json_string))).toStrictEqual(
+    Option.Some(undefined)
+  );
 });

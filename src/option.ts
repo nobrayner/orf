@@ -386,7 +386,7 @@ export namespace Option {
       throw new Error("Invalid Option JSON");
     }
 
-    if (json.tag === "Some" && "value" in json) {
+    if (json.tag === "Some") {
       return Some(json.value);
     }
 

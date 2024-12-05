@@ -214,6 +214,11 @@ test("Result.toJSON", () => {
     tag: "Error",
     error: "ERROR",
   });
+  expect(Result.Ok<void>(undefined).toJSON()).toStrictEqual({
+    __orf_type__: "Result",
+    tag: "Ok",
+    value: undefined,
+  });
 });
 
 test("Result.isResult", () => {
@@ -232,6 +237,15 @@ test("Result.fromJSON", () => {
 
   expect(Result.fromJSON(ok_json)).toStrictEqual(ok);
   expect(Result.fromJSON(error_json)).toStrictEqual(error);
+
+  expect(Option.fromJSON(Option.Some(undefined).toJSON())).toStrictEqual(
+    Option.Some(undefined)
+  );
+
+  const json_string = JSON.stringify(Result.Ok<void>(undefined));
+  expect(Result.fromJSON(JSON.parse(json_string))).toStrictEqual(
+    Result.Ok(undefined)
+  );
 });
 
 test("Result.all", () => {

@@ -537,11 +537,11 @@ export namespace Result {
       throw new JSError("Invalid Result JSON");
     }
 
-    if (json.tag === "Ok" && "value" in json) {
+    if (json.tag === "Ok") {
       return Ok(json.value);
     }
 
-    if (json.tag === "Error" && "error" in json) {
+    if (json.tag === "Error") {
       return Error(json.error);
     }
 

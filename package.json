@@ -1,6 +1,6 @@
 {
   "name": "@nobrayner/orf",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Option. Result. Future",
   "sideEffect": false,
   "main": "lib/orf.js",

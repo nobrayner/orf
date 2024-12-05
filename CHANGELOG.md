@@ -1,5 +1,11 @@
 # orf
 
+## 0.0.6
+
+### Patch Changes
+
+- 0b6e02d: Fixes fromJSON crashing when no value/error field found
+
 ## 0.0.5
 
 ### Patch Changes

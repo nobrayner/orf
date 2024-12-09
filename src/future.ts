@@ -365,6 +365,60 @@ export namespace Future {
     return future;
   }
 
+  /**
+   * Creates a new `Future` that resolves to a tuple of the passed fallible future's
+   * resolved `Result` values. Similiar to `Promise.allSettled`
+   *
+   * ## Example
+   * ```ts
+   * const result = await Future.all([Future.success(1), Future.success("hi")]);
+   * // result === Option.Some([Result.Ok(1), Result.Ok("hi")]))
+   *
+   * const result = await Future.all([
+   *   Future.success(1),
+   *   Future.fail("error1"),
+   *   Future.fail("error2"),
+   *]);
+   * // result === Option.Some([
+   *   Result.Ok(1),
+   *   Result.Error("error1"),
+   *   Result.Error("error2"),
+   * ])
+   *```
+   */
+  export function allResolved<A extends Array<FallibleFuture<any, any>>>(
+    array: [...A]
+  ): Future<{
+    [K in keyof A]: Result<orf.InferOkType<A[K]>, orf.InferErrorType<A[K]>>;
+  }> {
+    const future = Future.make<any>((resolve) => {
+      const results: Array<any> = new Array(array.length);
+
+      let count = 0;
+
+      array.forEach((f, i) => {
+        f.onResolved((value) => {
+          results[i] = value;
+          count += 1;
+
+          if (count === array.length) {
+            resolve(results);
+          }
+        });
+      });
+
+      // Propagate cancel
+      return () => array.forEach((f) => f.cancel());
+    });
+
+    array.forEach((f) => f.onCancelled(future.cancel.bind(future)));
+
+    return future;
+  }
+
+  /**
+   * Similar to `Future.all`, but for a dictionary of `Fallible Future`s
+   */
   export function allFromDict<
     D extends { [K: PropertyKey]: FallibleFuture<any, any> }
   >(
@@ -373,11 +427,17 @@ export namespace Future {
     { [K in keyof D]: orf.InferOkType<D[K]> },
     orf.InferErrorType<D[keyof D]>
   >;
+  /**
+   * Similar to `Future.all`, but for a dictionary of `Future`s
+   */
   export function allFromDict<D extends { [K: PropertyKey]: Future<any> }>(
     dict: D
   ): Future<{
     [K in keyof D]: D[K] extends Future<infer U> ? U : never;
   }>;
+  /**
+   * Similar to `Future.all`, but for a dictionary of `Future`s or `Fallible Future`s.
+   */
   export function allFromDict<
     D extends { [K: PropertyKey]: Future<any> | FallibleFuture<any, any> }
   >(

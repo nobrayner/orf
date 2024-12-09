@@ -430,6 +430,23 @@ test("Future.all", async () => {
   await expect(f3).resolves.toStrictEqual(Option.Some(Result.Error(2)));
 });
 
+test("Future.allResolved", async () => {
+  const f1 = Future.allResolved([Future.success(1), Future.success(2)]);
+  await expect(f1).resolves.toStrictEqual(
+    Option.Some([Result.Ok(1), Result.Ok(2)])
+  );
+
+  const f2 = Future.allResolved([Future.success(1), Future.fail(2)]);
+  await expect(f2).resolves.toStrictEqual(
+    Option.Some([Result.Ok(1), Result.Error(2)])
+  );
+
+  const f3 = Future.allResolved([Future.fail(1), Future.fail(2)]);
+  await expect(f3).resolves.toStrictEqual(
+    Option.Some([Result.Error(1), Result.Error(2)])
+  );
+});
+
 test("Future.allFromDict", async () => {
   await expect(
     Future.allFromDict({

@@ -1,5 +1,11 @@
 # orf
 
+## 0.0.7
+
+### Patch Changes
+
+- ad67271: Adds Future.allResolved to get an tuple of resolved FallibleFutures
+
 ## 0.0.6
 
 ### Patch Changes

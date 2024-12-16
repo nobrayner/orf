@@ -1,5 +1,11 @@
 # orf
 
+## 0.0.8
+
+### Patch Changes
+
+- 5291a8a: Fix inferrence type helpers to handle JsonResult and JsonOption
+
 ## 0.0.7
 
 ### Patch Changes

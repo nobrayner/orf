@@ -318,10 +318,10 @@ interface IOption<T> {
 export type Some<T> = __Some<T>;
 export type None<T> = __None<T>;
 export type Option<T> = Some<T> | None<T>;
-export type JsonOption<T> = { __orf_type__: "Option" } & (
-  | { tag: "Some"; value: T }
-  | { tag: "None" }
-);
+
+type JsonSome<T> = { __orf_type__: "Option"; tag: "Some"; value: T };
+type JsonNone<_T> = { __orf_type__: "Option"; tag: "None" };
+export type JsonOption<T> = JsonSome<T> | JsonNone<T>;
 
 export namespace Option {
   /**

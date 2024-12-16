@@ -350,9 +350,10 @@ interface IResult<T, E> {
 export type Ok<T, E> = __Ok<T, E>;
 export type Error<T, E> = __Error<T, E>;
 export type Result<T, E> = Ok<T, E> | Error<T, E>;
-export type JsonResult<T, E> =
-  | { __orf_type__: "Result"; tag: "Ok"; value: T }
-  | { __orf_type__: "Result"; tag: "Error"; error: E };
+
+type JsonOk<T, _E> = { __orf_type__: "Result"; tag: "Ok"; value: T };
+type JsonError<_T, E> = { __orf_type__: "Result"; tag: "Error"; error: E };
+export type JsonResult<T, E> = JsonOk<T, E> | JsonError<T, E>;
 
 export namespace Result {
   /**

@@ -380,10 +380,10 @@ export namespace Future {
    *   Future.fail("error2"),
    *]);
    * // result === Option.Some([
-   *   Result.Ok(1),
-   *   Result.Error("error1"),
-   *   Result.Error("error2"),
-   * ])
+   * //   Result.Ok(1),
+   * //   Result.Error("error1"),
+   * //   Result.Error("error2"),
+   * // ])
    *```
    */
   export function allResolved<A extends Array<FallibleFuture<any, any>>>(

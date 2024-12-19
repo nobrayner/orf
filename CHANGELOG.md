@@ -1,5 +1,12 @@
 # orf
 
+## 0.0.10
+
+### Patch Changes
+
+- 8f50277: Fix Future.fromFallible to handle PromiseLikes as well as Promises
+- 8f50277: Future.fromFallible can now be called on async functions, to turn them into a FallibleFuture
+
 ## 0.0.9
 
 ### Patch Changes

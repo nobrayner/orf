@@ -72,17 +72,29 @@ export namespace Future {
    * - `Result<T, E>` as `FallibleFuture<T, E>`
    * - `FallibleFuture<T, E>` as is
    * - `Promise<T>` as `FallibleFuture<T, unknown>`
+   * - `() => Promise<T>` as `FallibleFuture<T, unknown>`
    */
   export function fromFallible<T, E = unknown>(
-    fallible: Result<T, E> | FallibleFuture<T, E> | Promise<T>
+    fallible:
+      | Result<T, E>
+      | FallibleFuture<T, E>
+      | Promise<T>
+      | PromiseLike<T>
+      | (() => Promise<T>)
   ): FallibleFuture<T, E> {
     if (fallible instanceof __FallibleFuture) {
       return fallible;
     }
 
-    if (fallible instanceof Promise) {
+    if ("then" in fallible) {
       return Future.makeFallible<T, E>((s, f) => {
-        fallible.then(s).catch(f);
+        Promise.resolve(fallible).then(s).catch(f);
+      });
+    }
+
+    if (typeof fallible === "function") {
+      return Future.makeFallible<T, E>((s, f) => {
+        Promise.resolve(fallible()).then(s).catch(f);
       });
     }
 
